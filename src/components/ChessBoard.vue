@@ -1,27 +1,34 @@
 <template>
   <div class="chess-container">
     <h1>Jeu d'Échecs - Déplacement Libre</h1>
-    
-    <div class="chess-board">
-      <div 
-        v-for="(row, rowIndex) in board" 
-        :key="rowIndex" 
+
+    <div class="chess-board" data-testid="chess-board">
+      <div
+        v-for="(row, rowIndex) in board"
+        :key="rowIndex"
         class="board-row"
+        :data-testid="`row-r${rowIndex}`"
       >
         <div
           v-for="(cell, colIndex) in row"
           :key="colIndex"
           class="board-cell"
+          :data-testid="`cell-r${rowIndex}-c${colIndex}`"
           :class="[
             getCellColor(rowIndex, colIndex),
-            { 
-              'selected': isSelected(rowIndex, colIndex),
+            {
+              selected: isSelected(rowIndex, colIndex),
               'last-move': isLastMove(rowIndex, colIndex)
             }
           ]"
           @click="handleCellClick(rowIndex, colIndex)"
         >
-          <div v-if="cell" class="piece" :class="cell.color">
+          <div
+            v-if="cell"
+            class="piece"
+            :class="cell.color"
+            :data-testid="`piece-${cell.color}-${cell.type}-r${rowIndex}-c${colIndex}`"
+          >
             {{ getPieceSymbol(cell) }}
           </div>
         </div>
@@ -29,15 +36,25 @@
     </div>
 
     <div class="info-panel">
-      <button @click="resetBoard" class="reset-button">Réinitialiser</button>
-      
-      <div class="history-section">
-        <h3>Historique des mouvements ({{ moveHistory.length }})</h3>
-        <div class="history-list">
-          <div 
-            v-for="(move, index) in moveHistory.slice().reverse()" 
+      <button
+        @click="resetBoard"
+        class="reset-button"
+        data-testid="reset-button"
+      >
+        Réinitialiser
+      </button>
+
+      <div class="history-section" data-testid="history-section">
+        <h3 data-testid="history-title">
+          Historique des mouvements ({{ moveHistory.length }})
+        </h3>
+
+        <div class="history-list" data-testid="history-list">
+          <div
+            v-for="(move, index) in moveHistory.slice().reverse()"
             :key="index"
             class="history-item"
+            :data-testid="`history-item-${index}`"
           >
             <span class="move-number">{{ moveHistory.length - index }}.</span>
             {{ formatMove(move) }}
@@ -49,10 +66,10 @@
 </template>
 
 <script>
-import { ChessService } from '../services/ChessService.js';
+import { ChessService } from "../services/ChessService.js";
 
 export default {
-  name: 'ChessBoard',
+  name: "ChessBoard",
   data() {
     return {
       chessService: new ChessService(),
@@ -70,29 +87,31 @@ export default {
       this.moveHistory = this.chessService.getMoveHistory();
     },
     getCellColor(row, col) {
-      return (row + col) % 2 === 0 ? 'light' : 'dark';
+      return (row + col) % 2 === 0 ? "light" : "dark";
     },
     isSelected(row, col) {
-      return this.selectedCell && 
-             this.selectedCell.row === row && 
-             this.selectedCell.col === col;
+      return (
+        this.selectedCell &&
+        this.selectedCell.row === row &&
+        this.selectedCell.col === col
+      );
     },
     isLastMove(row, col) {
       const lastMove = this.chessService.getLastMove();
       if (!lastMove) return false;
-      
-      return (lastMove.from.row === row && lastMove.from.col === col) ||
-             (lastMove.to.row === row && lastMove.to.col === col);
+
+      return (
+        (lastMove.from.row === row && lastMove.from.col === col) ||
+        (lastMove.to.row === row && lastMove.to.col === col)
+      );
     },
     handleCellClick(row, col) {
       if (this.selectedCell === null) {
         // Sélectionner une pièce
         const piece = this.chessService.getPieceAt(row, col);
-        if (piece) {
-          this.selectedCell = { row, col };
-        }
+        if (piece) this.selectedCell = { row, col };
       } else {
-        // Déplacer la pièce
+        // Déplacer la pièce (mode libre)
         this.chessService.movePiece(
           this.selectedCell.row,
           this.selectedCell.col,
@@ -106,40 +125,40 @@ export default {
     getPieceSymbol(piece) {
       const symbols = {
         white: {
-          king: '♔',
-          queen: '♕',
-          rook: '♖',
-          bishop: '♗',
-          knight: '♘',
-          pawn: '♙'
+          king: "♔",
+          queen: "♕",
+          rook: "♖",
+          bishop: "♗",
+          knight: "♘",
+          pawn: "♙"
         },
         black: {
-          king: '♚',
-          queen: '♛',
-          rook: '♜',
-          bishop: '♝',
-          knight: '♞',
-          pawn: '♟'
+          king: "♚",
+          queen: "♛",
+          rook: "♜",
+          bishop: "♝",
+          knight: "♞",
+          pawn: "♟"
         }
       };
       return symbols[piece.color][piece.type];
     },
     formatMove(move) {
-      const colLetters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+      const colLetters = ["a", "b", "c", "d", "e", "f", "g", "h"];
       const pieceNames = {
-        king: 'Roi',
-        queen: 'Dame',
-        rook: 'Tour',
-        bishop: 'Fou',
-        knight: 'Cavalier',
-        pawn: 'Pion'
+        king: "Roi",
+        queen: "Dame",
+        rook: "Tour",
+        bishop: "Fou",
+        knight: "Cavalier",
+        pawn: "Pion"
       };
-      
+
       const from = `${colLetters[move.from.col]}${8 - move.from.row}`;
       const to = `${colLetters[move.to.col]}${8 - move.to.row}`;
       const pieceName = pieceNames[move.piece.type];
-      const captured = move.capturedPiece ? ' (capture)' : '';
-      
+      const captured = move.capturedPiece ? " (capture)" : "";
+
       return `${pieceName} ${from} → ${to}${captured}`;
     },
     resetBoard() {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { ChessService } from "../ChessService";
+import { ChessService } from "../src/services/ChessService";
 
 describe("ChessService (8x8 board)", () => {
   let service: ChessService;
