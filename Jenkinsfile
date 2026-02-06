@@ -5,7 +5,7 @@ pipeline {
     stage('Build') {
       agent {
         docker {
-          image 'mcr.microsoft.com/playwright:v1.57.0-noble'
+          image 'mcr.microsoft.com/playwright:v1.58.0-noble'
           args '--network=host'
         }
       }
@@ -18,7 +18,7 @@ pipeline {
     stage('Unit Tests (Vitest)') {
       agent {
         docker {
-          image 'mcr.microsoft.com/playwright:v1.57.0-noble'
+          image 'mcr.microsoft.com/playwright:v1.58.0-noble'
           args '--network=host'
         }
       }
@@ -44,7 +44,7 @@ pipeline {
     stage('UI Tests (Playwright)') {
       agent {
         docker {
-          image 'mcr.microsoft.com/playwright:v1.57.0-noble'
+          image 'mcr.microsoft.com/playwright:v1.58.0-noble'
           args '--network=host'
         }
       }
@@ -68,3 +68,4 @@ pipeline {
     }
   }
 }
+git add Jenkinsfile package.json package-lock.json .gitignore
