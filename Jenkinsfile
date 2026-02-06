@@ -1,14 +1,19 @@
 pipeline {
-  agent any
+  agent none
+
   stages {
-    stage('step1') {
-      steps {
-        sh 'echo étape un'
+    stage('Build') {
+      agent {
+        docker {
+          image 'mcr.microsoft.com/playwright:v1.57.0-noble'
+          args '--network=host'
+        }
       }
-    }
-    stage('step2') {
       steps {
-        sh 'echo étape deux'
+        sh 'node -v'
+        sh 'npm -v'
+        sh 'npm ci || npm install'
+        sh 'node ./node_modules/vite/bin/vite.js build'
       }
     }
   }
