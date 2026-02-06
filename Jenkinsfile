@@ -68,4 +68,3 @@ pipeline {
     }
   }
 }
-git add Jenkinsfile package.json package-lock.json .gitignore
