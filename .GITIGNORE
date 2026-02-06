@@ -1,11 +1,14 @@
 # Dépendances
 node_modules/
-package-lock.json
 
 # Build
 dist/
 dist-ssr/
 *.local
+
+# Test reports (generated)
+html/
+playwright-report/
 
 # Logs
 *.log
