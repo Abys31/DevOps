@@ -16,40 +16,39 @@ test("initial placement: key pieces are visible in expected cells", async ({ pag
   await expect(page.getByTestId("cell-r6-c7").getByTestId("piece-white-pawn-r6-c7")).toBeVisible();
 });
 
-test("user can move a piece by clicking source then destination (free move)", async ({ page }) => {
+test("user can move a piece legally by clicking source then destination", async ({ page }) => {
   await page.goto("/");
 
-  // Déplacer le pion blanc de (6,0) vers (4,0)
-  await page.getByTestId("cell-r6-c0").click();
-  await page.getByTestId("cell-r4-c0").click();
+  // Déplacer le pion blanc de e2 (6,4) vers e4 (4,4) — coup légal
+  await page.getByTestId("cell-r6-c4").click();
+  await page.getByTestId("cell-r4-c4").click();
 
   // Vérifier que la pièce est arrivée
-  await expect(page.getByTestId("piece-white-pawn-r4-c0")).toBeVisible();
-  // Vérifier que la source est vide (plus de pièce)
-  await expect(page.getByTestId("cell-r6-c0").locator(".piece")).toHaveCount(0);
+  await expect(page.getByTestId("piece-white-pawn-r4-c4")).toBeVisible();
+  // Vérifier que la source est vide
+  await expect(page.getByTestId("cell-r6-c4").locator(".piece")).toHaveCount(0);
 });
 
-test("user can capture/replace by clicking destination occupied cell", async ({ page }) => {
+test("illegal moves are rejected", async ({ page }) => {
   await page.goto("/");
 
-  // Déplacer le pion blanc (6,0) sur un pion noir (1,0) -> remplacement
+  // Tenter de déplacer le pion blanc de a2 (6,0) vers a5 (3,0) — illégal
   await page.getByTestId("cell-r6-c0").click();
-  await page.getByTestId("cell-r1-c0").click();
+  await page.getByTestId("cell-r3-c0").click();
 
-  // La case contient maintenant un pion blanc
-  await expect(page.getByTestId("piece-white-pawn-r1-c0")).toBeVisible();
-
-  // Et plus de pion noir sur cette case
-  await expect(page.getByTestId("cell-r1-c0").locator('[data-testid^="piece-black-pawn"]')).toHaveCount(0);
+  // Le pion doit toujours être en a2
+  await expect(page.getByTestId("piece-white-pawn-r6-c0")).toBeVisible();
+  // Et a5 doit être vide
+  await expect(page.getByTestId("cell-r3-c0").locator(".piece")).toHaveCount(0);
 });
 
-test("history updates after a move", async ({ page }) => {
+test("history updates after a legal move", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByTestId("cell-r6-c0").click();
-  await page.getByTestId("cell-r4-c0").click();
+  await page.getByTestId("cell-r6-c4").click();
+  await page.getByTestId("cell-r4-c4").click();
 
   // ton UI affiche "Historique des mouvements (X)"
   await expect(page.getByText(/Historique des mouvements \(\d+\)/)).toBeVisible();
-  await expect(page.getByText(/Pion/i)).toBeVisible(); // "Pion a2 → a4" etc.
+  await expect(page.getByText(/Pion/i)).toBeVisible(); // "Pion e2 → e4" etc.
 });
