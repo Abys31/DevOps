@@ -19,29 +19,30 @@ stage('Install & Build') {
   }
 }
     stage('UI Tests (Playwright)') {
-      agent {
-        docker {
-          image 'mcr.microsoft.com/playwright:v1.58.0-noble'
-          args '--network=host -u root:root'
-        }
-      }
-      steps {
-        sh 'npm run test:e2e'
-      }
-      post {
-        always {
-          publishHTML([
-            allowMissing: true,
-            alwaysLinkToLastBuild: false,
-            keepAll: true,
-            reportDir: 'playwright-report',
-            reportFiles: 'index.html',
-            reportName: 'PlaywrightReport',
-            useWrapperFileDirectly: true
-          ])
-        }
-      }
+  agent {
+    docker {
+      image 'mcr.microsoft.com/playwright:v1.58.0-noble'
+      args '--network=host -u root:root'
     }
+  }
+  steps {
+    sh 'chmod +x node_modules/.bin/*'  // Ajouter cette ligne
+    sh 'npm run test:e2e'
+  }
+  post {
+    always {
+      publishHTML([
+        allowMissing: true,
+        alwaysLinkToLastBuild: false,
+        keepAll: true,
+        reportDir: 'playwright-report',
+        reportFiles: 'index.html',
+        reportName: 'PlaywrightReport',
+        useWrapperFileDirectly: true
+      ])
+    }
+  }
+}
     stage('Deploy') {
       when {
         branch 'main'
