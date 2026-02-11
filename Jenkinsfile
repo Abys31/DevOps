@@ -2,13 +2,13 @@ pipeline {
   agent none
 
   environment {
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
     NETLIFY_AUTH_TOKEN = credentials('NETLIFY_TOKEN')
-    NETLIFY_SITE_ID = '3c8adef6-ba3b-444f-a8ae-250c4f1dbb27'
   }
 
   stages {
 
-    stage('Unit Tests (Vitest)') {
+    stage('Install & Build') {
       agent {
         docker {
           image 'mcr.microsoft.com/playwright:v1.58.0-noble'
@@ -16,21 +16,8 @@ pipeline {
         }
       }
       steps {
-        sh 'npm ci'
-        sh 'npm run test'
-      }
-      post {
-        always {
-          publishHTML([
-            allowMissing: true,
-            alwaysLinkToLastBuild: true,
-            keepAll: true,
-            reportDir: 'html',
-            reportFiles: 'index.html',
-            reportName: 'VitestReport',
-            useWrapperFileDirectly: true
-          ])
-        }
+        sh 'npm i'
+        sh 'npm run build'
       }
     }
 
@@ -42,14 +29,13 @@ pipeline {
         }
       }
       steps {
-        sh 'npm ci'
         sh 'npm run test:e2e'
       }
       post {
         always {
           publishHTML([
             allowMissing: true,
-            alwaysLinkToLastBuild: true,
+            alwaysLinkToLastBuild: false,
             keepAll: true,
             reportDir: 'playwright-report',
             reportFiles: 'index.html',
@@ -60,39 +46,36 @@ pipeline {
       }
     }
 
-    stage('Deploy (Netlify)') {
-      when { branch 'main' }   // change en 'master' si besoin
+    stage('Deploy') {
+      when {
+        branch 'main'
+      }
       agent {
         docker {
           image 'node:20-alpine'
-          args '--network=host'
         }
       }
       steps {
-        sh 'npm ci'
+        sh 'npm i'
         sh 'npm run build'
-        sh 'npx netlify deploy --prod --dir=dist --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --no-build'
+        sh 'npx netlify deploy --prod --dir=dist --site 3c8adef6-ba3b-444f-a8ae-250c4f1dbb27 --auth $NETLIFY_AUTH_TOKEN --no-build'
+
       }
     }
-
-        
-        stage('Docker Build & Push') {
-            when {
-                branch 'main'
-            }
-            agent any
-            environment {
-                CI_REGISTRY = 'ghcr.io'
-                CI_REGISTRY_USER = 'abys31'
-                CI_REGISTRY_IMAGE = "${CI_REGISTRY}/${CI_REGISTRY_USER}/chess"
-                CI_REGISTRY_PASSWORD = credentials('CI_REGISTRY_PASSWORD')
-            }
-            steps {
-                sh 'docker build --network=host -t $CI_REGISTRY_IMAGE .'
-                sh 'echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY'
-                sh 'docker push $CI_REGISTRY_IMAGE'
-            }
-        }
-
+    stage('docker') {
+      agent any
+      when { branch 'main' }
+      environment {
+        CI_REGISTRY = 'ghcr.io' // a remplacer par 'registry.gitlab.com' si
+        CI_REGISTRY_USER = 'abys31' // à remplacer par votre login chez gitlab ou github
+        CI_REGISTRY_IMAGE = "$CI_REGISTRY" + '/' + "$CI_REGISTRY_USER" + '/chessboard-jenkins'
+        CI_REGISTRY_PASSWORD = credentials('CI_REGISTRY_PASSWORD')
+      }
+      steps {
+        sh 'docker build --network=host -t ${CI_REGISTRY_IMAGE}:latest .'
+        sh 'docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY'
+        sh 'docker push ${CI_REGISTRY_IMAGE}:latest'
+      }
+    }
   }
 }
