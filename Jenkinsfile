@@ -5,44 +5,44 @@ pipeline {
     NETLIFY_AUTH_TOKEN = credentials('NETLIFY_TOKEN')
   }
   stages {
-stage('Install & Build') {
-  agent {
-    docker {
-      image 'mcr.microsoft.com/playwright:v1.58.0-noble'
-      args '--network=host'
+    stage('Install & Build') {
+      agent {
+        docker {
+          image 'mcr.microsoft.com/playwright:v1.58.0-noble'
+          args '--network=host'
+        }
+      }
+      steps {
+        sh 'npm i'
+        sh 'chmod +x node_modules/.bin/*'
+        sh 'npm run build'
+      }
     }
-  }
-  steps {
-    sh 'npm i'
-    sh 'chmod +x node_modules/.bin/*'
-    sh 'npm run build'
-  }
-}
     stage('UI Tests (Playwright)') {
-  agent {
-    docker {
-      image 'mcr.microsoft.com/playwright:v1.58.0-noble'
-      args '--network=host -u root:root'
+      agent {
+        docker {
+          image 'mcr.microsoft.com/playwright:v1.58.0-noble'
+          args '--network=host'
+        }
+      }
+      steps {
+        sh 'chmod +x node_modules/.bin/*'
+        sh 'npm run test:e2e'
+      }
+      post {
+        always {
+          publishHTML([
+            allowMissing: true,
+            alwaysLinkToLastBuild: false,
+            keepAll: true,
+            reportDir: 'playwright-report',
+            reportFiles: 'index.html',
+            reportName: 'PlaywrightReport',
+            useWrapperFileDirectly: true
+          ])
+        }
+      }
     }
-  }
-  steps {
-    sh 'chmod +x node_modules/.bin/*'  // Ajouter cette ligne
-    sh 'npm run test:e2e'
-  }
-  post {
-    always {
-      publishHTML([
-        allowMissing: true,
-        alwaysLinkToLastBuild: false,
-        keepAll: true,
-        reportDir: 'playwright-report',
-        reportFiles: 'index.html',
-        reportName: 'PlaywrightReport',
-        useWrapperFileDirectly: true
-      ])
-    }
-  }
-}
     stage('Deploy') {
       when {
         branch 'main'
