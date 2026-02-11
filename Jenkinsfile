@@ -1,9 +1,10 @@
 pipeline {
   agent none
   environment {
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
-    NETLIFY_AUTH_TOKEN = credentials('NETLIFY_TOKEN')
-  }
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+  NETLIFY_AUTH_TOKEN = credentials('NETLIFY_TOKEN')
+  NETLIFY_SITE_ID = '26077973-d7c5-4a37-a420-a7e9f530bbc5'
+}
   stages {
     stage('Install & Build') {
       agent {
@@ -44,21 +45,21 @@ pipeline {
       }
     }
     stage('Deploy') {
-      when {
-        branch 'main'
-      }
-      agent {
-        docker {
-          image 'node:20-alpine'
-        }
-      }
-      steps {
-        sh 'npm i'
-        sh 'chmod +x node_modules/.bin/*'
-        sh 'npm run build'
-        sh 'npx netlify deploy --prod --dir=dist --site chesseapp --auth $NETLIFY_AUTH_TOKEN --no-build'
-      }
-    }
+  when { branch 'main' }
+  agent { docker { image 'node:20-alpine' } }
+  steps {
+    sh 'npm i'
+    sh 'chmod +x node_modules/.bin/*'
+    sh 'npm run build'
+
+    // IMPORTANT: lier le projet dans le conteneur CI
+    sh 'npx netlify link --id $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN'
+
+    // Déployer
+    sh 'npx netlify deploy --prod --dir=dist --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --no-build'
+  }
+}
+
     stage('docker') {
       agent any
       when { branch 'main' }
