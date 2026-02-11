@@ -3,8 +3,8 @@ FROM node:lts-alpine AS build-stage
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-RUN chmod +x node_modules/.bin/*
 COPY . .
+RUN chmod +x node_modules/.bin/*
 RUN npm run build
 # Production stage
 FROM nginx:stable-alpine AS production-stage
