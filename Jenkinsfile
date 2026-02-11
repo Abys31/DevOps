@@ -54,6 +54,7 @@ pipeline {
       }
       steps {
         sh 'npm i'
+        sh 'chmod +x node_modules/.bin/*'
         sh 'npm run build'
         sh 'npx netlify deploy --prod --dir=dist --site 3c8adef6-ba3b-444f-a8ae-250c4f1dbb27 --auth $NETLIFY_AUTH_TOKEN --no-build'
       }
