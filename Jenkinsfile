@@ -52,13 +52,12 @@ pipeline {
     sh 'chmod +x node_modules/.bin/*'
     sh 'npm run build'
 
-    // IMPORTANT: lier le projet dans le conteneur CI
-    sh 'npx netlify link --id $NETLIFY_SITE_ID --auth $NETLIFY_TOKEN'
-
-    // Déployer
-    sh 'npx netlify deploy --prod --dir=dist --site $NETLIFY_SITE_ID --auth $NETLIFY_TOKEN --no-build'
+    // Netlify CLI lit NETLIFY_AUTH_TOKEN depuis l'environnement
+    sh 'npx netlify link --id 26077973-d7c5-4a37-a420-a7e9f530bbc5'
+    sh 'npx netlify deploy --prod --dir=dist --site 26077973-d7c5-4a37-a420-a7e9f530bbc5 --no-build'
   }
 }
+
 
     stage('docker') {
       agent any
