@@ -74,15 +74,7 @@ pipeline {
         sh 'npx netlify deploy --prod --dir=dist --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --no-build'
       }
     }
-    stage('Deploy') {
-            when {
-                branch 'main'
-            }
-            agent any
-            steps {
-                sh 'echo "Déploiement en production sur main"'
-            }
-        }
+
         
         stage('Docker Build & Push') {
             when {
@@ -91,7 +83,7 @@ pipeline {
             agent any
             environment {
                 CI_REGISTRY = 'ghcr.io'
-                CI_REGISTRY_USER = 'Abys31'
+                CI_REGISTRY_USER = 'abys31'
                 CI_REGISTRY_IMAGE = "${CI_REGISTRY}/${CI_REGISTRY_USER}/chess"
                 CI_REGISTRY_PASSWORD = credentials('CI_REGISTRY_PASSWORD')
             }
