@@ -53,7 +53,7 @@ pipeline {
     sh 'npm run build'
 
     // IMPORTANT: lier le projet dans le conteneur CI
-    sh 'npx netlify link --id $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN'
+    sh 'npx netlify link --id $NETLIFY_SITE_ID --auth $NETLIFY_TOKEN'
 
     // Déployer
     sh 'npx netlify deploy --prod --dir=dist --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --no-build'
