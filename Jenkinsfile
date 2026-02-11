@@ -5,18 +5,19 @@ pipeline {
     NETLIFY_AUTH_TOKEN = credentials('NETLIFY_TOKEN')
   }
   stages {
-    stage('Install & Build') {
-      agent {
-        docker {
-          image 'mcr.microsoft.com/playwright:v1.58.0-noble'
-          args '--network=host -u root:root'
-        }
-      }
-      steps {
-        sh 'npm i'
-        sh 'npm run build'
-      }
+stage('Install & Build') {
+  agent {
+    docker {
+      image 'mcr.microsoft.com/playwright:v1.58.0-noble'
+      args '--network=host'
     }
+  }
+  steps {
+    sh 'npm i'
+    sh 'chmod +x node_modules/.bin/*'
+    sh 'npm run build'
+  }
+}
     stage('UI Tests (Playwright)') {
       agent {
         docker {
