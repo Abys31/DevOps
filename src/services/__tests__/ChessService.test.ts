@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { ChessService } from "../ChessService.js";
 
-describe("ChessService (8x8 board)", () => {
+describe("ChessService (chess.js)", () => {
   let service: ChessService;
 
   beforeEach(() => {
@@ -54,64 +54,101 @@ describe("ChessService (8x8 board)", () => {
   });
 
   it("movePiece should return false if there is no piece at the source", () => {
-    // Middle board is empty initially
     expect(service.movePiece(3, 3, 4, 4)).toBe(false);
     expect(service.getMoveHistory()).toHaveLength(0);
   });
 
-  it("movePiece should move a piece freely to an empty square and record history", () => {
-    // Move white pawn from (6,0) to (4,0) (free mode)
-    const ok = service.movePiece(6, 0, 4, 0);
+  it("movePiece should return false for an illegal move", () => {
+    // Try to move white pawn from a2 (6,0) to a5 (3,0) — illegal (too far)
+    expect(service.movePiece(6, 0, 3, 0)).toBe(false);
+    expect(service.getMoveHistory()).toHaveLength(0);
+  });
+
+  it("movePiece should move a piece legally and record history", () => {
+    // Move white pawn from e2 (6,4) to e4 (4,4) — legal opening move
+    const ok = service.movePiece(6, 4, 4, 4);
     expect(ok).toBe(true);
 
-    expect(service.getPieceAt(6, 0)).toBeNull();
-    expect(service.getPieceAt(4, 0)).toMatchObject({ type: "pawn", color: "white" });
+    expect(service.getPieceAt(6, 4)).toBeNull();
+    expect(service.getPieceAt(4, 4)).toMatchObject({ type: "pawn", color: "white" });
 
     const history = service.getMoveHistory();
     expect(history).toHaveLength(1);
 
     const m = history[0];
-    expect(m.from).toEqual({ row: 6, col: 0 });
-    expect(m.to).toEqual({ row: 4, col: 0 });
+    expect(m.from).toEqual({ row: 6, col: 4 });
+    expect(m.to).toEqual({ row: 4, col: 4 });
     expect(m.piece).toMatchObject({ type: "pawn", color: "white" });
     expect(m.capturedPiece).toBeNull();
     expect(m.timestamp).toBeInstanceOf(Date);
   });
 
-  it("movePiece should replace (capture) a piece if destination is occupied", () => {
-    // Move white pawn from (6,0) onto a black pawn at (1,0)
-    const ok = service.movePiece(6, 0, 1, 0);
+  it("movePiece should enforce turn order", () => {
+    // White moves first — trying to move black should fail
+    expect(service.movePiece(1, 4, 3, 4)).toBe(false); // black pawn e7→e5
+
+    // White moves first
+    expect(service.movePiece(6, 4, 4, 4)).toBe(true); // white pawn e2→e4
+
+    // Now black can move
+    expect(service.movePiece(1, 4, 3, 4)).toBe(true); // black pawn e7→e5
+  });
+
+  it("movePiece should allow a legal capture", () => {
+    // 1. e2→e4
+    service.movePiece(6, 4, 4, 4);
+    // 2. d7→d5
+    service.movePiece(1, 3, 3, 3);
+    // 3. e4xd5 — capture
+    const ok = service.movePiece(4, 4, 3, 3);
     expect(ok).toBe(true);
 
-    // Destination now has white pawn
-    expect(service.getPieceAt(1, 0)).toMatchObject({ type: "pawn", color: "white" });
-    // Source cleared
-    expect(service.getPieceAt(6, 0)).toBeNull();
+    expect(service.getPieceAt(3, 3)).toMatchObject({ type: "pawn", color: "white" });
+    expect(service.getPieceAt(4, 4)).toBeNull();
 
     const history = service.getMoveHistory();
-    expect(history).toHaveLength(1);
-    expect(history[0].capturedPiece).toMatchObject({ type: "pawn", color: "black" });
+    expect(history).toHaveLength(3);
+    expect(history[2].capturedPiece).toMatchObject({ type: "pawn", color: "black" });
+  });
+
+  it("getCurrentTurn should return the current turn", () => {
+    expect(service.getCurrentTurn()).toBe("white");
+    service.movePiece(6, 4, 4, 4);
+    expect(service.getCurrentTurn()).toBe("black");
+  });
+
+  it("getLegalMoves should return valid destinations for a piece", () => {
+    // White pawn on e2 (6,4) can go to e3 (5,4) or e4 (4,4)
+    const moves = service.getLegalMoves(6, 4);
+    expect(moves).toEqual(
+      expect.arrayContaining([
+        { row: 5, col: 4 },
+        { row: 4, col: 4 }
+      ])
+    );
+    expect(moves).toHaveLength(2);
+  });
+
+  it("getGameStatus should return 'playing' at start", () => {
+    expect(service.getGameStatus()).toBe("playing");
   });
 
   it("getLastMove should return null when history is empty, otherwise the last move", () => {
     expect(service.getLastMove()).toBeNull();
 
-    service.movePiece(6, 1, 5, 1);
-    service.movePiece(6, 2, 5, 2);
+    service.movePiece(6, 4, 4, 4);
+    service.movePiece(1, 4, 3, 4);
 
     const last = service.getLastMove();
     expect(last).not.toBeNull();
-    expect(last!.from).toEqual({ row: 6, col: 2 });
-    expect(last!.to).toEqual({ row: 5, col: 2 });
+    expect(last!.from).toEqual({ row: 1, col: 4 });
+    expect(last!.to).toEqual({ row: 3, col: 4 });
   });
 
-  it("getAllPiecePositions should return all current pieces with their positions", () => {
+  it("getAllPiecePositions should return all current pieces", () => {
     const positions = service.getAllPiecePositions();
-
-    // Initial pieces = 32
     expect(positions.length).toBe(32);
 
-    // Contains some known pieces
     expect(positions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ row: 0, col: 4, piece: expect.objectContaining({ type: "king", color: "black" }) }),
@@ -121,19 +158,14 @@ describe("ChessService (8x8 board)", () => {
   });
 
   it("reset should restore initial board and clear move history", () => {
-    service.movePiece(6, 0, 4, 0);
+    service.movePiece(6, 4, 4, 4);
     expect(service.getMoveHistory().length).toBe(1);
 
     service.reset();
 
     expect(service.getMoveHistory().length).toBe(0);
-    expect(service.getPieceAt(6, 0)).toMatchObject({ type: "pawn", color: "white" });
-    expect(service.getPieceAt(4, 0)).toBeNull();
-  });
-
-  it("getBoard returns the internal board reference (sanity)", () => {
-    const b1 = service.getBoard();
-    const b2 = service.getBoard();
-    expect(b1).toBe(b2);
+    expect(service.getPieceAt(6, 4)).toMatchObject({ type: "pawn", color: "white" });
+    expect(service.getPieceAt(4, 4)).toBeNull();
+    expect(service.getCurrentTurn()).toBe("white");
   });
 });

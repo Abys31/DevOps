@@ -1,6 +1,27 @@
 <template>
   <div class="chess-container">
-    <h1>Jeu d'Échecs - Déplacement Libre</h1>
+    <h1>Jeu d'Échecs</h1>
+
+    <!-- Indicateur de tour et statut -->
+    <div class="status-bar" data-testid="status-bar">
+      <div class="turn-indicator" data-testid="turn-indicator">
+        <span class="turn-dot" :class="currentTurn"></span>
+        Tour : <strong>{{ currentTurn === 'white' ? 'Blancs' : 'Noirs' }}</strong>
+      </div>
+      <div
+        v-if="gameStatus !== 'playing'"
+        class="game-status"
+        :class="gameStatus"
+        data-testid="game-status"
+      >
+        <template v-if="gameStatus === 'check'">⚠️ Échec !</template>
+        <template v-else-if="gameStatus === 'checkmate'">
+          ♚ Échec et mat ! {{ currentTurn === 'white' ? 'Les Noirs' : 'Les Blancs' }} gagnent !
+        </template>
+        <template v-else-if="gameStatus === 'stalemate'">🤝 Pat — Partie nulle</template>
+        <template v-else-if="gameStatus === 'draw'">🤝 Partie nulle</template>
+      </div>
+    </div>
 
     <div class="chess-board" data-testid="chess-board">
       <div
@@ -18,7 +39,8 @@
             getCellColor(rowIndex, colIndex),
             {
               selected: isSelected(rowIndex, colIndex),
-              'last-move': isLastMove(rowIndex, colIndex)
+              'last-move': isLastMove(rowIndex, colIndex),
+              'legal-move': isLegalMove(rowIndex, colIndex)
             }
           ]"
           @click="handleCellClick(rowIndex, colIndex)"
@@ -31,6 +53,10 @@
           >
             {{ getPieceSymbol(cell) }}
           </div>
+          <div
+            v-else-if="isLegalMove(rowIndex, colIndex)"
+            class="legal-move-dot"
+          ></div>
         </div>
       </div>
     </div>
@@ -75,7 +101,10 @@ export default {
       chessService: new ChessService(),
       board: [],
       selectedCell: null,
-      moveHistory: []
+      legalMoves: [],
+      moveHistory: [],
+      currentTurn: 'white',
+      gameStatus: 'playing'
     };
   },
   mounted() {
@@ -85,6 +114,8 @@ export default {
     updateBoard() {
       this.board = this.chessService.getBoard();
       this.moveHistory = this.chessService.getMoveHistory();
+      this.currentTurn = this.chessService.getCurrentTurn();
+      this.gameStatus = this.chessService.getGameStatus();
     },
     getCellColor(row, col) {
       return (row + col) % 2 === 0 ? "light" : "dark";
@@ -105,20 +136,43 @@ export default {
         (lastMove.to.row === row && lastMove.to.col === col)
       );
     },
+    isLegalMove(row, col) {
+      return this.legalMoves.some(m => m.row === row && m.col === col);
+    },
     handleCellClick(row, col) {
+      // Ne rien faire si la partie est terminée
+      if (this.gameStatus === 'checkmate' || this.gameStatus === 'stalemate' || this.gameStatus === 'draw') {
+        return;
+      }
+
       if (this.selectedCell === null) {
-        // Sélectionner une pièce
+        // Sélectionner une pièce (seulement si c'est le bon tour)
         const piece = this.chessService.getPieceAt(row, col);
-        if (piece) this.selectedCell = { row, col };
+        if (piece && piece.color === this.currentTurn) {
+          this.selectedCell = { row, col };
+          this.legalMoves = this.chessService.getLegalMoves(row, col);
+        }
       } else {
-        // Déplacer la pièce (mode libre)
-        this.chessService.movePiece(
+        // Tenter de déplacer la pièce
+        const moved = this.chessService.movePiece(
           this.selectedCell.row,
           this.selectedCell.col,
           row,
           col
         );
+
+        if (!moved) {
+          // Si le clic est sur une pièce de la même couleur, sélectionner celle-ci
+          const piece = this.chessService.getPieceAt(row, col);
+          if (piece && piece.color === this.currentTurn) {
+            this.selectedCell = { row, col };
+            this.legalMoves = this.chessService.getLegalMoves(row, col);
+            return;
+          }
+        }
+
         this.selectedCell = null;
+        this.legalMoves = [];
         this.updateBoard();
       }
     },
@@ -164,6 +218,7 @@ export default {
     resetBoard() {
       this.chessService.reset();
       this.selectedCell = null;
+      this.legalMoves = [];
       this.updateBoard();
     }
   }
@@ -182,8 +237,62 @@ export default {
 }
 
 h1 {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   color: #333;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 15px;
+  padding: 10px 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.turn-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.turn-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #333;
+}
+
+.turn-dot.white {
+  background-color: #fff;
+}
+
+.turn-dot.black {
+  background-color: #000;
+}
+
+.game-status {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.game-status.check {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.game-status.checkmate {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.game-status.stalemate,
+.game-status.draw {
+  background-color: #d1ecf1;
+  color: #0c5460;
 }
 
 .chess-board {
@@ -226,6 +335,27 @@ h1 {
 
 .board-cell.last-move {
   background-color: #fdd835 !important;
+}
+
+.board-cell.legal-move {
+  cursor: pointer;
+}
+
+.board-cell.legal-move::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: rgba(0, 128, 0, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.legal-move-dot {
+  width: 24px;
+  height: 24px;
+  background-color: rgba(0, 128, 0, 0.4);
+  border-radius: 50%;
 }
 
 .piece {
